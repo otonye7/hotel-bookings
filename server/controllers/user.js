@@ -77,7 +77,10 @@ const login = async (req, res) => {
                 name: user.name,
                 email: user.email,
                 createdAt: user.createdAt,
-                updateAt: user.updatedAt
+                updateAt: user.updatedAt,
+                stripe_account_id: user.stripe_account_id,
+                stripe_seller: user.stripe_seller,
+                stripeSession: user.stripeSession,
             }
         })
     })

@@ -23,16 +23,56 @@ const createConnectAccount = async (req, res) => {
     res.send(`${accountLink.url}?${queryString.stringify(accountLink)}`)
 }
 
+const updateDelayDays = async (accountId) => {
+    const account = await stripe.accounts.update(accountId, {
+        settings: {
+            payouts: {
+                schedule: {
+                    delay_days: 7
+                }
+            }
+        }
+    })
+    return account
+}
+
 const getAccountStatus = async (req, res) => {
     const user = await User.findById(req.auth._id).exec();
     const account = await stripe.accounts.retrieve(user.stripe_account_id);
+    const updatedAccount = await updateDelayDays(account.id)
     const updatedUser = await User.findByIdAndUpdate(user._id, {
-        stripe_seller: account
+        stripe_seller: updatedAccount
     }, {new: true}).select("-password").exec();
     res.json(updatedUser)
 }
 
+const getAccountBalance = async (req, res) => {
+    const user = await User.findById(req.auth._id).exec();
+    try {
+        const balance = await stripe.balance.retrieve({
+            stripeAccount: user.stripe_account_id
+        });
+        res.json(balance)
+    } catch (err) {
+        console.log(err)
+    }
+}
+
+const payoutSetting = async (req, res) => {
+    try {
+        const user = await User.findById(req.auth._id).exec();
+        const loginLink = await stripe.accounts.createLoginLink(user.stripe_seller.id, {
+            redirect_url: process.env.STRIPE_SETTING_REDIRECT_URL
+        })
+        res.json(loginLink)
+    } catch (err) {
+        console.log(err)
+    }
+}
+
 module.exports = {
    createConnectAccount,
-   getAccountStatus
+   getAccountStatus,
+   getAccountBalance,
+   payoutSetting
 }
