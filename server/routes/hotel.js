@@ -4,9 +4,10 @@ const { requireSignin } = require("../middlewares/index");
 
 const router = express.Router();
 
-const { create, hotels } = require("../controllers/hotel.js");
+const { create, hotels, image } = require("../controllers/hotel.js");
 
 router.post("/create-hotel", requireSignin, formidable(), create);
 router.get("/hotels", hotels);
+router.get("/hotel/image/:hotelId", image)
 
 module.exports = router

@@ -34,7 +34,16 @@ const hotels = async (req, res) => {
     return res.json(all)
 }
 
+const image = async (req, res) => {
+    let hotel = await Hotel.findById(req.params.hotelId).exec();
+    if(hotel && hotel.image && hotel.image.data !== null){
+        res.set(`Content-Type`, hotel.image.contentType);
+        return res.send(hotel.image.data)
+    }
+}
+
 module.exports = {
     create,
-    hotels
+    hotels,
+    image
 }
