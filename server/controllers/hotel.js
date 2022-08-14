@@ -6,6 +6,7 @@ const create = async (req, res) => {
         let fields = req.fields;
         let files = req.files;
         let hotel = new Hotel(fields)
+        hotel.postedBy = req.auth._id
         if(files.image){
             hotel.image.data = fs.readFileSync(files.image.path);
             hotel.image.contentType = files.image.type;
@@ -42,8 +43,15 @@ const image = async (req, res) => {
     }
 }
 
+const sellerHotels = async (req, res) => {
+    let all = await Hotel.find({ postedBy: req.auth._id }).select("-image.data")
+    .populate("postedBy", "_id name").exec();
+    res.send(all)
+}
+
 module.exports = {
     create,
     hotels,
-    image
+    image,
+    sellerHotels
 }
