@@ -2,7 +2,6 @@ const User = require('../models/user');
 const jwt = require("jsonwebtoken");
 
 const register = async (req, res) => {
-    console.log(req.body)
     const { email, name, password, confirmPassword } = req.body;
     if(!email){
         res.status(400).send("Email is required");

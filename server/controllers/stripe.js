@@ -70,9 +70,48 @@ const payoutSetting = async (req, res) => {
     }
 }
 
+const stripeSessionId = async (req, res) => {
+    const { hotelId } = req.body;
+    const item = await Hotel.findById(hotelId).populate("postedBy").exec();
+    const fee = (item.price * 20) / 100;
+ 
+    const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        // 5 purchasing item details, it will be shown to user on checkout
+        line_items: [
+          {
+            name: item.title,
+            amount: item.price * 100, // in cents
+            currency: "usd",
+            quantity: 1,
+          },
+        ],
+        // 6 create payment intent with application fee and destination charge 80%
+        payment_intent_data: {
+          application_fee_amount: fee * 100,
+          // this seller can see his balance in our frontend dashboard
+          transfer_data: {
+            destination: item.postedBy.stripe_account_id,
+          },
+        },
+        // success and calcel urls
+        success_url: `${process.env.STRIPE_SUCCESS_URL}/${item._id}`,
+        cancel_url: process.env.STRIPE_CANCEL_URL,
+      });
+     
+      // 7 add this session object to user in the db
+      await User.findByIdAndUpdate(req.auth._id, { stripeSession: session }).exec();
+      // 8 send session id as resposne to frontend
+      res.send({
+        sessionId: session.id,
+      });
+
+}
+
 module.exports = {
    createConnectAccount,
    getAccountStatus,
    getAccountBalance,
-   payoutSetting
+   payoutSetting,
+   stripeSessionId
 }
