@@ -1,4 +1,5 @@
 const Hotel = require('../models/hotels');
+const Order = require("../models/order");
 const fs = require("fs");
 
 const create = async (req, res) => {
@@ -80,6 +81,14 @@ const update = async (req, res) => {
     }
 }
 
+const userHotelBookings = async (req, res) => {
+    const all = await Order.find({ orderedBy: req.auth._id })
+    .select("session")
+    .populate("hotel", "-image.data")
+    .populate("orderedBy", "_id name").exec();
+     res.json(all)
+}
+
 module.exports = {
     create,
     hotels,
@@ -87,5 +96,6 @@ module.exports = {
     sellerHotels,
     remove,
     read,
-    update
+    update,
+    userHotelBookings
 }

@@ -1,4 +1,6 @@
 const User = require("../models/user");
+const Order = require("../models/order");
+const Hotel = require("../models/hotels");
 const stripe = require("stripe")(process.env.STRIPE_SECRET);
 const queryString = require("query-string");
 
@@ -77,7 +79,6 @@ const stripeSessionId = async (req, res) => {
  
     const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
-        // 5 purchasing item details, it will be shown to user on checkout
         line_items: [
           {
             name: item.title,
@@ -86,26 +87,53 @@ const stripeSessionId = async (req, res) => {
             quantity: 1,
           },
         ],
-        // 6 create payment intent with application fee and destination charge 80%
         payment_intent_data: {
           application_fee_amount: fee * 100,
-          // this seller can see his balance in our frontend dashboard
           transfer_data: {
             destination: item.postedBy.stripe_account_id,
           },
         },
-        // success and calcel urls
         success_url: `${process.env.STRIPE_SUCCESS_URL}/${item._id}`,
         cancel_url: process.env.STRIPE_CANCEL_URL,
       });
-     
-      // 7 add this session object to user in the db
       await User.findByIdAndUpdate(req.auth._id, { stripeSession: session }).exec();
-      // 8 send session id as resposne to frontend
       res.send({
         sessionId: session.id,
       });
+}
 
+const stripeSuccess = async (req, res) => {
+  console.log(req.body)
+  try {
+    const { hotelId } = req.body;
+    const user = await User.findById(req.auth._id).exec();
+    if(!user.stripeSession){
+        return
+    }
+    const session = await stripe.checkout.sessions.retrieve(user.stripeSession.id);
+    if(session.payment_status === "paid"){
+        const orderExist = await Order.findOne({ "session.id": session.id }).exec();
+        if(orderExist){
+            res.json({
+                success: true
+            })
+        } else {
+            let newOrder = await new Order({
+                hotel: hotelId,
+                session,
+                orderedBy: user._id
+            }).save();
+            await User.findByIdAndUpdate(user._id, {
+                $set: { stripeSession: {} }
+            });
+            res.json({
+                success: true
+            })
+        }
+    }
+  } catch (err) {
+    console.log(err)
+  }
 }
 
 module.exports = {
@@ -113,5 +141,7 @@ module.exports = {
    getAccountStatus,
    getAccountBalance,
    payoutSetting,
-   stripeSessionId
+   stripeSessionId,
+   stripeSuccess
 }
+
