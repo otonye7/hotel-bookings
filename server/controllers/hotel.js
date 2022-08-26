@@ -102,6 +102,16 @@ const isAlreadyBooked = async (req, res) => {
     })
 }
 
+const searchListings = async (req, res) => {
+    const { location, date, bed } = req.body;
+    const fromDate = date.split(",");
+
+    let result = await Hotel.find({ from: { $gte: new Date(fromDate[0]) }, location })
+    .select("-image.data")
+    .exec();
+    res.json(result)
+}
+
 module.exports = {
     create,
     hotels,
@@ -111,5 +121,6 @@ module.exports = {
     read,
     update,
     userHotelBookings,
-    isAlreadyBooked
+    isAlreadyBooked,
+    searchListings
 }
